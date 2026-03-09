@@ -17,7 +17,7 @@ class AliyunTrafficCheck
     private $notificationService;
     private $initError = null;
 
-    const KEEP_ALIVE_COOLDOWN = 1800;
+
 
     public function __construct()
     {
@@ -393,28 +393,21 @@ class AliyunTrafficCheck
                 }
             }
 
-            // 4. 保活逻辑
-            if ($keepAlive && $account['schedule_enabled'] == 1 && !$isOverThreshold) {
+            // 4. 保活逻辑 (跳过已被定时任务操作的实例)
+            if ($keepAlive && $account['schedule_enabled'] == 1 && !$isOverThreshold && !$statusTransformed) {
                 if ($this->isTimeInRange($currentUserTime, $account['start_time'], $account['stop_time'])) {
                     if ($status === 'Stopped') {
-                        $lastKeepAlive = $account['last_keep_alive_at'] ?? 0;
-                        $timeSinceLast = $currentTime - $lastKeepAlive;
+                        if ($this->safeControlInstance($account, 'start')) {
+                            $actions[] = "保活启动";
+                            $this->db->addLog('info', "执行保活启动 [{$account['access_key_id']}]");
 
-                        if ($timeSinceLast > self::KEEP_ALIVE_COOLDOWN) {
-                            if ($this->safeControlInstance($account, 'start')) {
-                                $actions[] = "保活启动";
-                                $this->db->addLog('info', "执行保活启动 [{$account['access_key_id']}]");
+                            $mailRes = $this->notificationService->notifySchedule("保活启动", $account, "检测到实例在工作时段非预期关机，已尝试自动启动。");
+                            $this->logNotificationResult($mailRes, $account['access_key_id']);
 
-                                $mailRes = $this->notificationService->notifySchedule("保活启动", $account, "检测到实例在工作时段非预期关机，已尝试自动启动。");
-                                $this->logNotificationResult($mailRes, $account['access_key_id']);
-
-                                $this->configManager->updateLastKeepAlive($account['id'], $currentTime);
-                                $this->configManager->updateAccountStatus($account['id'], $traffic, 'Starting', $currentTime);
-                                $status = 'Starting';
-                            }
+                            $this->configManager->updateAccountStatus($account['id'], $traffic, 'Starting', $currentTime);
+                            $status = 'Starting';
                         } else {
-                            $cooldownLeft = ceil((self::KEEP_ALIVE_COOLDOWN - $timeSinceLast) / 60);
-                            $apiStatusLog .= " [保活冷却:{$cooldownLeft}m]";
+                            $apiStatusLog .= " [保活启动失败,下次重试]";
                         }
                     }
                 }
