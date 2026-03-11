@@ -94,7 +94,7 @@ class AliyunService
      * @param string $targetRegion 目标实例的区域ID
      * @throws \Exception
      */
-    public function getTraffic($key, $secret, $targetRegion)
+    public function getTraffic($key, $secret, $targetRegion, $isInternational = false)
     {
         // 1. 检查缓存
         $cacheKey = md5($key);
@@ -102,7 +102,7 @@ class AliyunService
             $result = $this->trafficCache[$cacheKey];
         } else {
             // 2. 如果无缓存，发起 API 请求
-            $result = $this->executeWithRetry(function () use ($key, $secret) {
+            $result = $this->executeWithRetry(function () use ($key, $secret, $isInternational) {
                 AlibabaCloud::accessKeyClient($key, $secret)
                     ->regionId('cn-hongkong') // CDT 接口通常用 cn-hongkong 或 cn-hangzhou 调用即可获取全局数据
                     ->asDefaultClient();
@@ -113,7 +113,7 @@ class AliyunService
                     ->version('2021-08-13')
                     ->action('ListCdtInternetTraffic')
                     ->method('POST')
-                    ->host('cdt.aliyuncs.com')
+                    ->host($isInternational ? 'cdt.ap-southeast-1.aliyuncs.com' : 'cdt.aliyuncs.com')
                     ->options([
                         'connect_timeout' => 5.0,
                         'timeout' => 10.0
@@ -238,16 +238,16 @@ class AliyunService
      * @return array ['AvailableAmount' => '...', 'Currency' => 'CNY']
      * @throws \Exception
      */
-    public function getAccountBalance($key, $secret)
+    public function getAccountBalance($key, $secret, $isInternational = false)
     {
         $cacheKey = md5($key);
         if (isset($this->balanceCache[$cacheKey])) {
             return $this->balanceCache[$cacheKey];
         }
 
-        $result = $this->executeWithRetry(function () use ($key, $secret) {
+        $result = $this->executeWithRetry(function () use ($key, $secret, $isInternational) {
             AlibabaCloud::accessKeyClient($key, $secret)
-                ->regionId('cn-hangzhou')
+                ->regionId($isInternational ? 'ap-southeast-1' : 'cn-hangzhou')
                 ->asDefaultClient();
 
             return AlibabaCloud::rpc()
@@ -256,7 +256,7 @@ class AliyunService
                 ->version('2017-12-14')
                 ->action('QueryAccountBalance')
                 ->method('POST')
-                ->host('business.aliyuncs.com')
+                ->host($isInternational ? 'business.ap-southeast-1.aliyuncs.com' : 'business.aliyuncs.com')
                 ->options([
                     'connect_timeout' => 5.0,
                     'timeout' => 10.0
@@ -282,11 +282,11 @@ class AliyunService
      * @return array ['TotalCost' => float, 'Items' => [...]]
      * @throws \Exception
      */
-    public function getInstanceBill($key, $secret, $instanceId, $billingCycle)
+    public function getInstanceBill($key, $secret, $instanceId, $billingCycle, $isInternational = fasle)
     {
-        $result = $this->executeWithRetry(function () use ($key, $secret, $instanceId, $billingCycle) {
+        $result = $this->executeWithRetry(function () use ($key, $secret, $instanceId, $billingCycle, $isInternational) {
             AlibabaCloud::accessKeyClient($key, $secret)
-                ->regionId('cn-hangzhou')
+                ->regionId($isInternational ? 'ap-southeast-1' : 'cn-hangzhou')
                 ->asDefaultClient();
 
             return AlibabaCloud::rpc()
@@ -295,7 +295,7 @@ class AliyunService
                 ->version('2017-12-14')
                 ->action('DescribeInstanceBill')
                 ->method('POST')
-                ->host('business.aliyuncs.com')
+                ->host($isInternational ? 'business.ap-southeast-1.aliyuncs.com' : 'business.aliyuncs.com')
                 ->options([
                     'query' => [
                         'BillingCycle' => $billingCycle,
@@ -340,11 +340,11 @@ class AliyunService
      * @return array ['TotalCost' => float, 'Products' => [...]]
      * @throws \Exception
      */
-    public function getBillOverview($key, $secret, $billingCycle)
+    public function getBillOverview($key, $secret, $billingCycle, $isInternational = false)
     {
-        $result = $this->executeWithRetry(function () use ($key, $secret, $billingCycle) {
+        $result = $this->executeWithRetry(function () use ($key, $secret, $billingCycle, $isInternational) {
             AlibabaCloud::accessKeyClient($key, $secret)
-                ->regionId('cn-hangzhou')
+                ->regionId($isInternational ? 'ap-southeast-1' : 'cn-hangzhou')
                 ->asDefaultClient();
 
             return AlibabaCloud::rpc()
@@ -353,7 +353,7 @@ class AliyunService
                 ->version('2017-12-14')
                 ->action('QueryBillOverview')
                 ->method('POST')
-                ->host('business.aliyuncs.com')
+                ->host($isInternational ? 'business.ap-southeast-1.aliyuncs.com' : 'business.aliyuncs.com')
                 ->options([
                     'query' => [
                         'BillingCycle' => $billingCycle

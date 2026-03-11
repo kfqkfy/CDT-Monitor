@@ -154,6 +154,7 @@ class AliyunTrafficCheck
                 'regionId' => $row['region_id'],
                 'instanceId' => $row['instance_id'],
                 'maxTraffic' => (float) $row['max_traffic'],
+                'account_type' => $row['account_type'],
                 'schedule' => [
                     'enabled' => $row['schedule_enabled'] == 1,
                     'startTime' => $row['start_time'],
@@ -564,7 +565,7 @@ class AliyunTrafficCheck
     private function safeGetTraffic($account)
     {
         try {
-            return $this->aliyunService->getTraffic($account['access_key_id'], $account['access_key_secret'], $account['region_id']);
+            return $this->aliyunService->getTraffic($account['access_key_id'], $account['access_key_secret'], $account['region_id'], $account['account_type'] === 'international');
         } catch (ClientException $e) {
             $code = $e->getErrorCode();
             $this->db->addLog('error', "流量查询配置错误: " . ($code ?: "鉴权失败"));
@@ -670,10 +671,7 @@ class AliyunTrafficCheck
             $costInfo['currency'] = $balanceCache['Currency'] ?? 'CNY';
         } else {
             try {
-                $balance = $this->aliyunService->getAccountBalance(
-                    $account['access_key_id'],
-                    $account['access_key_secret']
-                );
+                $balance = $this->aliyunService->getAccountBalance($account['access_key_id'], $account['access_key_secret'], $account['account_type'] === 'international');
                 $costInfo['balance'] = $balance['AvailableAmount'];
                 $costInfo['currency'] = $balance['Currency'] ?? 'CNY';
                 $this->db->setBillingCache($account['id'], 'balance', '', $balance);
@@ -693,7 +691,8 @@ class AliyunTrafficCheck
                         $account['access_key_id'],
                         $account['access_key_secret'],
                         $account['instance_id'],
-                        $billingCycle
+                        $billingCycle,
+                        $account['account_type'] === 'international'
                     );
                     $costInfo['monthly_cost'] = $bill['TotalCost'];
                     $this->db->setBillingCache($account['id'], 'instance_bill', $billingCycle, $bill);

@@ -203,12 +203,12 @@
                     <div v-if="item.cost && item.cost.enabled" class="flex justify-between items-center">
                         <span class="text-sm font-medium text-gray-500">本月费用</span>
                         <span v-if="!item.cost.error" class="text-xs font-medium">
-                            <span v-if="item.cost.monthly_cost !== null" class="font-bold text-orange-500">¥{{
+                            <span v-if="item.cost.monthly_cost !== null" class="font-bold text-orange-500">{{ item.cost.currency === 'CNY' ? '￥' : (item.cost.currency === 'USD' ? '$' : item.cost.currency) }}{{
                                 item.cost.monthly_cost }}</span>
                             <span v-if="item.cost.monthly_cost !== null && item.cost.balance !== null"
                                 class="text-gray-300 mx-1">|</span>
                             <span v-if="item.cost.balance !== null" class="text-gray-400">余<span class="font-bold"
-                                    :class="parseFloat(item.cost.balance) < 100 ? 'text-red-500' : 'text-green-600'">¥{{
+                                    :class="parseFloat(item.cost.balance) < 100 ? 'text-red-500' : 'text-green-600'">{{ item.cost.currency === 'CNY' ? '￥' : (item.cost.currency === 'USD' ? '$' : item.cost.currency) }}{{
                                     item.cost.balance }}</span></span>
                         </span>
                         <span v-else class="text-[10px] text-gray-400">{{ item.cost.error }}</span>
@@ -767,7 +767,15 @@
                                         <input v-model="acc.instanceId" placeholder="实例 ID (必填)"
                                             class="w-full glass-input rounded-xl px-4 py-2 text-sm">
                                     </div>
-                                    <div class="space-y-1 relative">
+                                    
+                                    <div class="space-y-1">
+                                        <label class="text-xs font-medium text-gray-500 ml-2">账号类型</label>
+                                        <select v-model="acc.account_type" class="w-full glass-input rounded-xl px-4 py-2 text-sm appearance-none bg-white">
+                                            <option value="domestic">国内站</option>
+                                            <option value="international">国际站</option>
+                                        </select>
+                                    </div>
+    <div class="space-y-1 relative">
                                         <label class="text-xs font-medium text-gray-500 ml-2">Region ID</label>
                                         <input v-model="acc.regionId" @focus="regionSearchFocus = idx"
                                             @blur="setTimeout(() => regionSearchFocus = -1, 200)"
@@ -1468,7 +1476,7 @@
 
                 const addAccount = () => {
                     if (!config.value.Accounts) config.value.Accounts = [];
-                    config.value.Accounts.push({ AccessKeyId: '', AccessKeySecret: '', maxTraffic: 200, regionId: '', instanceId: '', remark: '', schedule: { enabled: false, startTime: '', stopTime: '' } });
+                    config.value.Accounts.push({ AccessKeyId: '', AccessKeySecret: '', maxTraffic: 200, regionId: '', account_type: 'domestic', instanceId: '', remark: '', schedule: { enabled: false, startTime: '', stopTime: '' } });
                 };
 
                 const removeAccount = (index) => { if (confirm('确定删除该账号配置？')) config.value.Accounts.splice(index, 1); };

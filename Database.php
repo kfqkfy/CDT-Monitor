@@ -92,7 +92,8 @@ class Database
             traffic_used REAL DEFAULT 0,
             instance_status TEXT DEFAULT 'Unknown',
             updated_at INTEGER DEFAULT 0,
-            last_keep_alive_at INTEGER DEFAULT 0
+            last_keep_alive_at INTEGER DEFAULT 0,
+            account_type TEXT DEFAULT 'domestic'
         )");
 
         $this->pdo->exec("CREATE TABLE IF NOT EXISTS logs (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, message TEXT, created_at INTEGER)");
@@ -137,6 +138,7 @@ class Database
         $this->ensureColumn('accounts', 'updated_at', 'INTEGER DEFAULT 0');
         $this->ensureColumn('accounts', 'last_keep_alive_at', 'INTEGER DEFAULT 0');
         $this->ensureColumn('accounts', 'remark', "TEXT DEFAULT ''");
+        $this->ensureColumn('accounts', 'account_type', "TEXT DEFAULT 'domestic'");
 
         $this->migrateStatsToAccountId();
     }
