@@ -234,6 +234,13 @@ func (s *Store) DeleteActionEvent(ctx context.Context, key string) error {
 	return err
 }
 
+// DeleteActionEventsByPrefix 删除匹配前缀的动作事件（如某账号当天的全部定时幂等键）。
+// 用于保存配置时清除定时幂等键，使"修改定时时间当天立即生效"。
+func (s *Store) DeleteActionEventsByPrefix(ctx context.Context, prefix string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM action_events WHERE event_key LIKE ?`, prefix+"%")
+	return err
+}
+
 func (s *Store) AddOutbox(ctx context.Context, event domain.NotificationEvent, channels []string) error {
 	payload, err := json.Marshal(event)
 	if err != nil {

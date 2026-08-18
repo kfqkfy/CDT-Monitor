@@ -567,8 +567,26 @@ func (s *Server) saveConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "config_failed", err.Error())
 		return
 	}
+	// 清除当天定时幂等键：修改定时时间后，当天按新时间立即生效
+	// （否则按天去重会让"已执行过的动作"在当天不再触发，改时间无效）
+	s.clearTodayScheduleEvents(r.Context(), config)
 	_ = s.store.AddLog(r.Context(), "audit", "管理员更新系统配置")
 	writeJSON(w, http.StatusOK, map[string]any{"success": true})
+}
+
+// clearTodayScheduleEvents 删除各账号"今天"的定时调度幂等键（schedule:<账号ID>:<YYYYMMDD>:*）
+func (s *Server) clearTodayScheduleEvents(ctx context.Context, config domain.Config) {
+	loc, err := time.LoadLocation(config.Timezone)
+	if err != nil {
+		loc = time.FixedZone("CST", 8*3600)
+	}
+	day := time.Now().In(loc).Format("20060102")
+	for _, acc := range config.Accounts {
+		prefix := fmt.Sprintf("schedule:%d:%s:", acc.ID, day)
+		if err := s.store.DeleteActionEventsByPrefix(ctx, prefix); err != nil {
+			s.logger.Error("clear schedule events", "account", acc.ID, "err", err)
+		}
+	}
 }
 
 func (s *Server) history(w http.ResponseWriter, r *http.Request) {
